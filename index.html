@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>convex hull</title>
+</head>
+<body>
+<script src="jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+    $(document).on('ready', function () {
+        $('#button').click(readInput);
+        $('#randomButton').click(randomInput);
+
+        var points, hull;
+        var N, ctx = document.getElementById('results').getContext('2d');
+
+        var Point = function (x, y) {
+            this.x = x;
+            this.y = y;
+        };
+
+        function randomInput() {
+            var num = parseInt($('#randomNumber').val());
+            var randoms = "";
+            for (var i = 0; i < num; i++) {
+                randoms += Math.floor(Math.random() * 400) + ',' + Math.floor(Math.random() * 400)
+                        + (i < num - 1 ? "\n" : "");
+            }
+            $('#points').val(randoms);
+            readInput();
+        }
+
+        function readInput() {
+            points = [];
+            hull = []; //reset points
+            var inputs = $('#points').val().split('\n');
+            for (var i = 0; i < inputs.length; i++) {
+                var temp = inputs[i].split(',');
+                points.push(new Point(parseInt(temp[0]), parseInt(temp[1])));
+            }
+            init();
+        }
+
+        function init() {
+            clearCanvas();
+            drawPoints();
+            graham();
+            drawHull();
+            if ($('select').val() === 'true') {
+                drawFan();
+            }
+        }
+
+        /**
+         * Three points are a counter-clockwise turn if ccw > 0, clockwise if
+         * ccw < 0, and collinear if ccw = 0 because ccw is a determinant that
+         * gives twice the signed  area of the triangle formed by p1, p2 and p3.
+         *
+         * @param p1
+         * @param p2
+         * @param p3
+         * @returns {number}
+         */
+        function ccw(p1, p2, p3) {
+            return (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x);
+        }
+
+        /**
+         * Returns the index of the point with the lowest y value
+         * @returns {number}
+         */
+        function findMinY() {
+            var low = null;
+            var lowIndex = 0;
+            for (var i = 0; i < points.length; i++) {
+                (low === null ? low = points[i].y : low);
+                if (points[i].y < low) {
+                    low = points[i].y;
+                    lowIndex = i;
+                } else if (points[i].y === low) {
+                    if (points[i].x < points[lowIndex].x) {
+                        lowIndex = i;
+                    }
+                }
+            }
+            return lowIndex;
+        }
+
+        function polarAngle(a, b) {
+            return -1 * Math.atan2();
+        }
+
+        /**
+         * swap elements at index i, j
+         * @param i
+         * @param j
+         */
+        function swap(i, j) {
+            var temp = points[j];
+            points[j] = points[i];
+            points[i] = temp;
+        }
+
+        //http://en.wikipedia.org/wiki/Graham_scan
+        function graham() {
+            N = points.length;
+            //pop p with point with the lowest y-coordinate
+            swap(findMinY(), 0);
+            hull.push(points.shift());
+
+            //sort on polar angle
+            points.sort(function (a, b) {
+                var angA = Math.atan2(a.y - hull[0].y, a.x - hull[0].x);
+                var angB = Math.atan2(b.y - hull[0].y, b.x - hull[0].x);
+                if (angA > angB) {
+                    return 1;
+                } else if (angA < angB) {
+                    return -1;
+                } else {
+                    var distA = Math.sqrt(((hull[0].x - a.x) * (hull[0].x - a.x)) + ((hull[0].y - a.y) * (hull[0].y - a.y)));
+                    var distB = Math.sqrt(((hull[0].x - b.x) * (hull[0].x - b.x)) + ((hull[0].y - b.y) * (hull[0].y - b.y)));
+                    if (distA < distB) {
+                        return -1
+                    } else {
+                        return 1;
+                    }
+                }
+            });
+
+            //p[1]
+            hull.push(points.shift());
+            //p[2]
+            hull.push(points.shift());
+
+            for (var i = 0; i < points.length; i++) {
+                var front = points[i]; //front
+                var middle = hull.pop(); //middle
+                var rear = hull[hull.length - 1]; //rear
+                var cv = ccw(rear, middle, front);
+
+                if (cv > 1) {
+                    hull.push(middle);
+                    hull.push(front);
+                } else if (cv < 1) {
+                    i--;
+                } else {
+                    hull.push(front);
+                }
+
+            }
+
+        }
+
+        function drawPoints() {
+            ctx.strokeStyle = "#000";
+            for (var i = 0; i < points.length; i++) {
+
+                ctx.fillRect(points[i].x, points[i].y, 4, 4);
+            }
+            //ctx.scale();
+
+        }
+
+        function drawHull() {
+            ctx.strokeStyle = "#af0";
+            ctx.beginPath();
+            ctx.moveTo(hull[0].x, hull[0].y);
+            for (var i = 0; i < hull.length; i++) {
+                ctx.lineTo(hull[i].x, hull[i].y);
+                ctx.moveTo(hull[i].x, hull[i].y);
+            }
+            ctx.lineTo(hull[0].x, hull[0].y);
+            ctx.stroke();
+        }
+
+        function drawFan() {
+            ctx.strokeStyle = "#f00";
+            ctx.beginPath();
+            ctx.moveTo(hull[0].x, hull[0].y);
+            for (var i = 0; i < hull.length; i++) {
+                ctx.lineTo(hull[i].x, hull[i].y);
+                ctx.moveTo(hull[0].x, hull[0].y);
+            }
+            ctx.stroke();
+        }
+
+        function clearCanvas() {
+            document.getElementById('results').width = document.getElementById('results').width;
+        }
+
+    });
+
+</script>
+
+<h1>convex hull</h1><br>
+input a set of at least 3 points (x,y), one per line: <br>
+<textarea rows="10" cols="10" id="points">100,200
+    200,300
+    40,50
+    60,10
+    250,250
+    10,40
+    30,20
+    325,40</textarea><br>
+<input type="button" value="submit" id="button"><input type="button" value="random" id="randomButton">
+<input type="number" value="100" id="randomNumber" width="6"><br>
+display fan:
+<select>
+    <option value="true">true</option>
+    <option value="false">false</option>
+</select><br><br>
+<canvas id="results" width="400" height="400" style="border:1px solid #000;">your browser sucks and doesn't support
+    canvases
+</canvas>
+
+
+</body>
+</html>
+
